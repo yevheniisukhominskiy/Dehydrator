@@ -18,6 +18,7 @@
 #define TIMER_BRIGHTMESS 3      // Яскравість дисплея від (0-7)
 #define TIMER_DELEY 150         // Затримка додавння значень
 #define TIMER_STEP 10           // Шаг для тривалому затисканню
+#define TIMER_MINUTE 67000      // Одна хвилина для таймеру
 
 #define TEMP_BRIGHTMESS 7       // Яскравість дисплея від (0-7)  
 #define TEMP_DELAY 300          // Затримка додавння значень 
@@ -91,6 +92,7 @@ Dryer() :
     void loop() 
     {
         setTimer();
+        timerCounting();
     }
 
     // Функція для встановлення часу на таймері
@@ -150,8 +152,68 @@ Dryer() :
                 }
            }
         }
-        disp_ta.displayClock(hours, minutes); // Виведення часу на дисплей
+        disp_ta.displayClock(hours, minutes);   // Виведення часу на дисплей
     }
+
+// Функція відліку часу
+void timerCounting()
+{
+    static unsigned long prevMillis = 0;
+    static unsigned long interval = TIMER_MINUTE;   // Інтервал у мілісекундах
+
+    buttonStart.tick();     // Опитування стану кнопки
+    if(buttonStart.click() && hours + minutes != 0)
+    {
+        if (!timerRunning) 
+        {    
+            // Якщо таймер не запущено, то запускаємо його
+            timerRunning = true;
+        } 
+        else 
+        { 
+            // Інакше зупиняємо таймер і зупиняємо навантаження
+            timerRunning = false;
+            digitalWrite(CHARGE, LOW);
+        }
+    }
+
+    if (timerRunning) 
+    {
+        if(hours + minutes == 0)
+        {
+            digitalWrite(CHARGE, LOW);
+        }
+        
+        disp_ta.displayClock(hours, minutes);   // Виведення часу на дисплей
+        
+        unsigned long currentMillis = millis();
+        if (currentMillis - prevMillis >= interval) 
+        {
+            prevMillis = currentMillis;
+            if (minutes == 0) 
+            {   
+                // Якщо хвилини закінчилися, то зменшуємо годинник
+                if (hours > 0) 
+                {
+                    hours--;
+                    minutes = 59;
+                } 
+                else 
+                { 
+                    // Якщо і години закінчилися, то зупиняємо таймер
+                    timerRunning = false;
+                }
+            } 
+            else 
+            {  
+                // інакше зменшуємо хвилини
+                minutes--;
+            }
+        }
+    }
+}
+
+
 };
 
 Dryer dryer;
