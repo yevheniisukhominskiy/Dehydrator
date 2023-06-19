@@ -90,9 +90,68 @@ Dryer() :
 
     void loop() 
     {
-
+        setTimer();
     }
 
+    // Функція для встановлення часу на таймері
+    void setTimer()
+    {
+        buttonTimerUp.tick();       // Опитуємо стан кнопки "Збільшити час"
+        buttonTimerDown.tick();     // Опитуємо стан кнопки "Зменшити час"
+
+        if (buttonTimerUp.click())
+        {
+            minutes += TIMER_STEP;
+            if(minutes == 60)
+            {
+                minutes = 0;
+                hours++;
+            }
+        }
+        else if(buttonTimerUp.hold())
+        {
+            minutes += TIMER_STEP;
+            delay(TIMER_DELEY);
+            if(minutes == 60)
+            {
+                minutes = 0;
+                hours++;
+            }
+        }
+
+        if (buttonTimerDown.click()) 
+        {
+           if(minutes > 0)
+           {
+            minutes -= TIMER_STEP;
+           }
+           else
+           {
+                if(hours > 0)
+                {
+                    hours--;
+                    minutes = 60 - TIMER_STEP;
+                }
+           }
+        }
+        else if(buttonTimerDown.hold())
+        {
+            if(minutes > 0)
+           {
+            minutes -= TIMER_STEP;
+            delay(TIMER_DELEY);
+           }
+           else
+           {
+                if(hours > 0)
+                {
+                    hours--;
+                    minutes = 60 - TIMER_STEP;
+                }
+           }
+        }
+        disp_ta.displayClock(hours, minutes); // Виведення часу на дисплей
+    }
 };
 
 Dryer dryer;
