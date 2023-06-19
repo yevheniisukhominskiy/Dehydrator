@@ -20,7 +20,7 @@ const byte numLeds = sizeof(ledPins) / sizeof(ledPins[0]);
 #define TIMER_BRIGHTMESS 3      // Яскравість дисплея від (0-7)
 #define TIMER_DELEY 150         // Затримка додавння значень
 #define TIMER_STEP 10           // Шаг для тривалому затисканню
-#define TIMER_MINUTE 67000      // Одна хвилина для таймеру
+#define TIMER_MINUTE 72000      // Одна хвилина для таймеру
 
 #define TEMP_BRIGHTMESS 7       // Яскравість дисплея від (0-7)  
 #define TEMP_DELAY 300          // Затримка додавння значень 
@@ -225,6 +225,7 @@ Dryer() :
 
         if (timerRunning) 
         {
+            setBlock = true;
             pollTemperatures();
             turnOffRele();
             if(hours + minutes == 0)
@@ -258,6 +259,10 @@ Dryer() :
                     minutes--;
                 }
             }
+        }
+        else
+        {
+            setBlock = false;
         }
     }
 
