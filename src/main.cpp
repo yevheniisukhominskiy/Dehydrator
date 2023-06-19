@@ -180,6 +180,7 @@ Dryer() :
 
         if (timerRunning) 
         {
+            pollTemperatures();
             if(hours + minutes == 0)
             {
                 digitalWrite(CHARGE, LOW);
@@ -255,19 +256,39 @@ Dryer() :
         if(!celsiusSign)
         {
             disp_ds.display(3, temptwo);    // Виводимо одиниці
-            delay(5);   // додаємо невелику затримку
+            delay(5);                       // додаємо невелику затримку
             disp_ds.display(2, tempone);    // выводимо десятки
         }
         else
         {
             disp_ds.display(1, temptwo);    // Виводимо одиниці
-            delay(5);   // додаємо невелику затримку
+            delay(5);                       // додаємо невелику затримку
             disp_ds.display(0, tempone);    // выводимо десятки
             disp_ds.displayByte(2, 0x39);   // Підставляємо знак Цельсія
-            delay(5);   // додаємо невелику затримку
+            delay(5);                       // додаємо невелику затримку
             disp_ds.displayByte(3, 0x63);   // Підставляємо знак градуса 
         }
     }
+
+    // Функція для отримання температури з датчика
+    void pollTemperatures()
+    {
+        static uint32_t timerTemp = millis();
+        if(millis() - timerTemp >= TEMP_QUIZ)
+        {
+            sensors.requestTemperatures();          // Запитуємо дані з датчика
+            tempC = sensors.getTempCByIndex(0);     // Зчитуємо температуру і зберегти її в змінній tempС
+
+            /*---------НАЛАГОДЖЕННЯ---------*/
+            Serial.print("Temperature: ");
+            Serial.print(tempC);
+            Serial.println("C");
+            /*------------------------------*/
+            
+            timerTemp = millis();
+        }
+    }
+
 
 };
 
