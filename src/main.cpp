@@ -110,6 +110,11 @@ Dryer() :
                 minutes = 0;
                 hours++;
             }
+            else if(hours >= 24)
+            {
+                hours = 0;
+                minutes = 0;
+            }
         }
         else if(buttonTimerUp.hold())
         {
@@ -119,6 +124,11 @@ Dryer() :
             {
                 minutes = 0;
                 hours++;
+            }
+            else if(hours >= 24)
+            {
+                hours = 0;
+                minutes = 0;
             }
         }
 
