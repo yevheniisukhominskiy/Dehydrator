@@ -58,6 +58,7 @@ private:
     bool timerRunning;  // Статус таймера
     float tempC;        // Зберігння температури для виводу
     bool celsiusSign;   // Статус зміни режиму на дисплею температури
+    bool setBlock;      // Блокування для зміни значень
     /*--------------------------------------------------------------*/
 
 public:
@@ -77,7 +78,8 @@ Dryer() :
         minutes(0),
         timerRunning(false),
         tempC(),
-        celsiusSign(false)
+        celsiusSign(false),
+        setBlock(false)
     {}
 
      void setup() 
@@ -91,9 +93,13 @@ Dryer() :
 
     void loop() 
     {
-        setTimer();                     // Функція для встановлення часу на таймері
+        // Блокування по кнопці старту (при тривалому натисканні)
+        if(setBlock == false)
+        {
+            setTimer();                     // Функція для встановлення часу на таймері
+            setTemperature(celsiusSign);    // Функція для встановлення температури
+        }
         timerCounting();                // Функція відліку часу
-        setTemperature(celsiusSign);    // Функція для встановлення температури
     }
 
     // Функція для встановлення часу на таймері
@@ -186,6 +192,12 @@ Dryer() :
                 timerRunning = false;
                 digitalWrite(CHARGE, LOW);
             }
+        }
+
+        // Флаг для блокування зміни значень
+        if(buttonStart.held() && hours + minutes != 0)
+        {
+            setBlock = !setBlock;
         }
 
         if (timerRunning) 
