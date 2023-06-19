@@ -78,16 +78,31 @@ Dryer() :
         tempC(),
         celsiusSign(false)
     {}
+
+     void setup() 
+    {
+        Serial.begin(9600);                     // Монітор порта для налагодження
+        sensors.begin();                        // Визов функції об'єкту 
+        pinMode(CHARGE, OUTPUT);                // Ініціалізація вихідного навантаження
+        disp_ds.brightness(TEMP_BRIGHTMESS);    // Яскравість дисплею температури
+        disp_ta.brightness(TIMER_BRIGHTMESS);   // Яскравість дисплею таймеру
+    }
+
+    void loop() 
+    {
+
+    }
+
 };
 
 Dryer dryer;
 
 void setup() 
 {
-
+    dryer.setup();
 }
 
 void loop() 
 {
-
+    dryer.loop();
 }
