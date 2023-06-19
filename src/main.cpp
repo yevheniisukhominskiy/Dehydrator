@@ -157,8 +157,8 @@ Dryer() :
         {
             if(minutes > 0)
            {
-            minutes -= TIMER_STEP;
-            delay(TIMER_DELEY);
+                minutes -= TIMER_STEP;
+                delay(TIMER_DELEY);
            }
            else
            {
@@ -253,10 +253,12 @@ Dryer() :
             temperature += TEMP_STEP;
             delay(TEMP_DELAY);
         }
+
         if (temperature > TEMP_MAX)
         {
             temperature = TEMP_MIN;
         }
+
         if (buttonTempDown.click())
         {
             temperature--;
@@ -266,13 +268,13 @@ Dryer() :
             temperature -= TEMP_STEP;
             delay(TEMP_DELAY);
         }
+
         if (temperature <= TEMP_MIN)
         {
             temperature = TEMP_MIN;
         }
         
         int temp = temperature;     // Перетворення значення температури на ціле число
-
         int tempone = temp / 10;    // Отримуємо десятки
         int temptwo = temp % 10;    // Отримуємо одиниці
 
