@@ -6,12 +6,15 @@
 #include <GyverTimers.h>
 
 /*--------------НАЛАШТУВАННЯ ПІНІВ ІНІЦІАЛІЗАЦІЇ--------------*/
-#define CLK_DS 15           // CLK датчик
-#define DIO_DS 16           // DIO датчик
-#define CLK_TA 17           // CLK таймер
-#define DIO_TA 18           // DIO таймер
-#define CHARGE 9            // Навантаження реле
-#define DS18B20 10          // Датчик
+#define CLK_DS 4           // CLK датчик
+#define DIO_DS 3           // DIO датчик
+#define CLK_TA 13           // CLK таймер
+#define DIO_TA 2           // DIO таймер
+#define CHARGE 11            // Навантаження реле
+#define DS18B20 12       // Датчик
+
+const int ledPins[] = {14, 15, 16, 17, 18, 19, 20, 21};
+const int numLeds = sizeof(ledPins) / sizeof(ledPins[0]);
 /*------------------------------------------------------------*/
 
 /*--------------------НАЛАШТУВАННЯ ЗНАЧЕНЬ--------------------*/
@@ -29,16 +32,30 @@
 #define TEMP_QUIZ 5000          // Час опитування датчика
 /*------------------------------------------------------------*/
 
+/*---------------------АВТОМАТИЧНІ РЕЖИМИ---------------------*/
+enum modesTemperature
+{
+    APPLES,     // Яблука
+    PEARS,      // Груші
+    CHERRY,     // Вишні
+    BERRIES,    // Ягоди
+    MUSHROOMS,  // Гриби
+    MEAT,       // М'ясо
+    HERBS,      // Трави
+    ROSEHIP     // Шипшина
+};
+/*------------------------------------------------------------*/
+
 class Dryer
 {
 private:
     /*-----------------НАЛАШТУВАННЯ ОБ'ЄКТІВ КНОПОК-----------------*/  
-    EncButton<EB_TICK, 2> buttonTempUp;     // Температура додавання    
-    EncButton<EB_TICK, 3> buttonTempDown;   // Температура віднімання 
-    EncButton<EB_TICK, 4> buttonTimerUp;    // Таймер додавання 
-    EncButton<EB_TICK, 5> buttonTimerDown;  // Таймер віднімання
-    EncButton<EB_TICK, 6> buttonMode;       // Вибір режиму
-    EncButton<EB_TICK, 7> buttonStart;      // Старт/стоп/блокування
+    EncButton<EB_TICK, 5> buttonTempUp;     // Температура додавання    
+    EncButton<EB_TICK, 6> buttonTempDown;   // Температура віднімання 
+    EncButton<EB_TICK, 7> buttonTimerUp;    // Таймер додавання 
+    EncButton<EB_TICK, 8> buttonTimerDown;  // Таймер віднімання
+    EncButton<EB_TICK, 9> buttonMode;       // Вибір режиму
+    EncButton<EB_TICK, 10> buttonStart;      // Старт/стоп/блокування
     /*--------------------------------------------------------------*/
 
     /*-----------------НАЛАШТУВАННЯ ОБ'ЄКТІВ ДИСПЛЕЇВ---------------*/
@@ -59,6 +76,8 @@ private:
     float tempC;        // Зберігння температури для виводу
     bool celsiusSign;   // Статус зміни режиму на дисплею температури
     bool setBlock;      // Блокування для зміни значень
+    bool modeSection;   // Вибір режиму авто-руч
+    int activeLed;      // Активний світлодіод
     /*--------------------------------------------------------------*/
 
 public:
@@ -79,7 +98,9 @@ Dryer() :
         timerRunning(false),
         tempC(),
         celsiusSign(false),
-        setBlock(false)
+        setBlock(false),
+        modeSection(true),                     // true - AUTOMATIC, false - MANUAL
+        activeLed(0)
     {}
 
      void setup() 
@@ -89,6 +110,11 @@ Dryer() :
         pinMode(CHARGE, OUTPUT);                // Ініціалізація вихідного навантаження
         disp_ds.brightness(TEMP_BRIGHTMESS);    // Яскравість дисплею температури
         disp_ta.brightness(TIMER_BRIGHTMESS);   // Яскравість дисплею таймеру
+        for (int i = 0; i < numLeds; i++)       // Ініціалізації ствітлодіодів
+        {
+            pinMode(ledPins[i], OUTPUT);
+            digitalWrite(ledPins[i], LOW);
+        }
     }
 
     void loop() 
@@ -97,9 +123,9 @@ Dryer() :
         if(setBlock == false)
         {
             setTimer();                     // Функція для встановлення часу на таймері
-            setTemperature(celsiusSign);    // Функція для встановлення температури
+            modeSelection();                // Функція для встановлення температури автоматичний (режими)
         }
-        timerCounting();                // Функція відліку часу
+        timerCounting();    // Функція відліку часу
     }
 
     // Функція для встановлення часу на таймері
@@ -238,8 +264,98 @@ Dryer() :
         }
     }
 
+    // Функція вибору рижиму авто/руч
+    void modeSelection()
+    {
+        buttonMode.tick();
+
+        if(buttonMode.held())
+        {
+            modeSection = !modeSection;
+        }
+
+        if(modeSection == true)
+        {
+            setTemperatureAuto(celsiusSign);           // Функція для встановлення температури автоматичний
+        }
+        else
+        {
+            setTemperatureManual(celsiusSign);    // Функція для встановлення температури ручний
+        }
+    }
+
+    void setTemperatureAuto(bool celsiusSign)
+    {
+        if (buttonMode.click()) 
+        {
+            digitalWrite(ledPins[activeLed], LOW);      // Вимикаємо попередній світлодіод
+            activeLed = (activeLed + 1) % numLeds;      // Збільшуємо індекс активного світлодіода
+            digitalWrite(ledPins[activeLed], HIGH);     // Збільшуємо індекс активного світлодіода
+
+            switch (activeLed)
+            {
+            case modesTemperature::APPLES:
+                Serial.println("Режим: Яблука");
+                temperature = 70;
+                break;
+            case modesTemperature::PEARS:
+                Serial.println("Режим: Груши");
+                temperature = 65;
+                break;
+            case modesTemperature::CHERRY:
+                Serial.println("Режим: Вишні");
+                temperature = 70;
+                break;
+            case modesTemperature::BERRIES:
+                Serial.println("Режим: Ягоди");
+                temperature = 50;
+                break;
+            case modesTemperature::MUSHROOMS:
+                Serial.println("Режим: Гриби");
+                temperature = 50;
+                break;
+            case modesTemperature::MEAT:
+                Serial.println("Режим: М'ясо");
+                temperature = 45;
+                break;
+            case modesTemperature::HERBS:
+                Serial.println("Режим: Трави");
+                temperature = 35;
+                break;
+            case modesTemperature::ROSEHIP:
+                Serial.println("Режим: Шипшина");
+                temperature = 55;
+                break;
+            default:
+                Serial.println("Помилка вибору режиму!");
+                temperature = TEMP_MIN;
+                break;
+            }
+        }
+
+        int temp = temperature;     // Перетворення значення температури на ціле число
+        int tempone = temp / 10;    // Отримуємо десятки
+        int temptwo = temp % 10;    // Отримуємо одиниці
+
+        if(!celsiusSign)
+        {
+            disp_ds.display(3, temptwo);    // Виводимо одиниці
+            delay(5);                       // додаємо невелику затримку
+            disp_ds.display(2, tempone);    // выводимо десятки
+        }
+        else
+        {
+            disp_ds.display(1, temptwo);    // Виводимо одиниці
+            delay(5);                       // додаємо невелику затримку
+            disp_ds.display(0, tempone);    // выводимо десятки
+            disp_ds.displayByte(2, 0x39);   // Підставляємо знак Цельсія
+            delay(5);                       // додаємо невелику затримку
+            disp_ds.displayByte(3, 0x63);   // Підставляємо знак градуса 
+        }
+    }
+
     // Функція для встановлення температури
-    void setTemperature(bool celsiusSign)
+    void setTemperatureManual(bool celsiusSign)
     {
         buttonTempUp.tick();    // Опитування стану кнопки температури +
         buttonTempDown.tick();  // Опитування стану кнопки температури -
@@ -329,7 +445,6 @@ Dryer() :
             digitalWrite(CHARGE, HIGH);     // Якщо умова виконується, увімкнемо реле заряду (CHARGE)
         }
     }
-
 };
 
 Dryer dryer;
