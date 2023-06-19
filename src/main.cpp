@@ -3,7 +3,6 @@
 #include <GyverTM1637.h>
 #include <DallasTemperature.h>
 #include <OneWire.h>
-#include <GyverTimers.h>
 
 /*--------------НАЛАШТУВАННЯ ПІНІВ ІНІЦІАЛІЗАЦІЇ--------------*/
 #define CLK_DS 4           // CLK датчик
@@ -13,8 +12,8 @@
 #define CHARGE 11            // Навантаження реле
 #define DS18B20 12       // Датчик
 
-const int ledPins[] = {14, 15, 16, 17, 18, 19, 20, 21};
-const int numLeds = sizeof(ledPins) / sizeof(ledPins[0]);
+const byte ledPins[] = {14, 15, 16, 17, 18, 19, 20, 21};
+const byte numLeds = sizeof(ledPins) / sizeof(ledPins[0]);
 /*------------------------------------------------------------*/
 
 /*--------------------НАЛАШТУВАННЯ ЗНАЧЕНЬ--------------------*/
@@ -29,7 +28,7 @@ const int numLeds = sizeof(ledPins) / sizeof(ledPins[0]);
 #define TEMP_MAX 70             // Максимальна температура
 #define TEMP_MIN 20             // Мінімальна температура
 #define TEMP_STEPON 1           // Шаг для увімкнення реле
-#define TEMP_QUIZ 5000          // Час опитування датчика
+#define TEMP_QUIZ 10000          // Час опитування датчика
 /*------------------------------------------------------------*/
 
 /*---------------------АВТОМАТИЧНІ РЕЖИМИ---------------------*/
@@ -45,7 +44,6 @@ enum modesTemperature
     ROSEHIP     // Шипшина
 };
 /*------------------------------------------------------------*/
-
 class Dryer
 {
 private:
@@ -77,7 +75,7 @@ private:
     bool celsiusSign;   // Статус зміни режиму на дисплею температури
     bool setBlock;      // Блокування для зміни значень
     bool modeSection;   // Вибір режиму авто-руч
-    int activeLed;      // Активний світлодіод
+    byte activeLed;      // Активний світлодіод
     /*--------------------------------------------------------------*/
 
 public:
@@ -102,15 +100,14 @@ Dryer() :
         modeSection(true),                     // true - AUTOMATIC, false - MANUAL
         activeLed(0)
     {}
-
-     void setup() 
+    void setup() 
     {
         Serial.begin(9600);                     // Монітор порта для налагодження
         sensors.begin();                        // Визов функції об'єкту 
         pinMode(CHARGE, OUTPUT);                // Ініціалізація вихідного навантаження
         disp_ds.brightness(TEMP_BRIGHTMESS);    // Яскравість дисплею температури
         disp_ta.brightness(TIMER_BRIGHTMESS);   // Яскравість дисплею таймеру
-        for (int i = 0; i < numLeds; i++)       // Ініціалізації ствітлодіодів
+        for (byte i = 0; i < numLeds; i++)       // Ініціалізації ствітлодіодів
         {
             pinMode(ledPins[i], OUTPUT);
             digitalWrite(ledPins[i], LOW);
@@ -333,23 +330,20 @@ Dryer() :
             }
         }
 
-        int temp = temperature;     // Перетворення значення температури на ціле число
-        int tempone = temp / 10;    // Отримуємо десятки
-        int temptwo = temp % 10;    // Отримуємо одиниці
+        byte temp = temperature;     // Перетворення значення температури на ціле число
+        byte tempone = temp / 10;    // Отримуємо десятки
+        byte temptwo = temp % 10;    // Отримуємо одиниці
 
         if(!celsiusSign)
         {
             disp_ds.display(3, temptwo);    // Виводимо одиниці
-            delay(5);                       // додаємо невелику затримку
             disp_ds.display(2, tempone);    // выводимо десятки
         }
         else
         {
             disp_ds.display(1, temptwo);    // Виводимо одиниці
-            delay(5);                       // додаємо невелику затримку
             disp_ds.display(0, tempone);    // выводимо десятки
             disp_ds.displayByte(2, 0x39);   // Підставляємо знак Цельсія
-            delay(5);                       // додаємо невелику затримку
             disp_ds.displayByte(3, 0x63);   // Підставляємо знак градуса 
         }
     }
@@ -390,23 +384,20 @@ Dryer() :
             temperature = TEMP_MIN;
         }
         
-        int temp = temperature;     // Перетворення значення температури на ціле число
-        int tempone = temp / 10;    // Отримуємо десятки
-        int temptwo = temp % 10;    // Отримуємо одиниці
+        byte temp = temperature;     // Перетворення значення температури на ціле число
+        byte tempone = temp / 10;    // Отримуємо десятки
+        byte temptwo = temp % 10;    // Отримуємо одиниці
 
         if(!celsiusSign)
         {
             disp_ds.display(3, temptwo);    // Виводимо одиниці
-            delay(5);                       // додаємо невелику затримку
             disp_ds.display(2, tempone);    // выводимо десятки
         }
         else
         {
             disp_ds.display(1, temptwo);    // Виводимо одиниці
-            delay(5);                       // додаємо невелику затримку
             disp_ds.display(0, tempone);    // выводимо десятки
             disp_ds.displayByte(2, 0x39);   // Підставляємо знак Цельсія
-            delay(5);                       // додаємо невелику затримку
             disp_ds.displayByte(3, 0x63);   // Підставляємо знак градуса 
         }
     }
