@@ -91,8 +91,9 @@ Dryer() :
 
     void loop() 
     {
-        setTimer();
-        timerCounting();
+        setTimer();                     // Функція для встановлення часу на таймері
+        timerCounting();                // Функція відліку часу
+        setTemperature(celsiusSign);    // Функція для встановлення температури
     }
 
     // Функція для встановлення часу на таймері
@@ -155,64 +156,118 @@ Dryer() :
         disp_ta.displayClock(hours, minutes);   // Виведення часу на дисплей
     }
 
-// Функція відліку часу
-void timerCounting()
-{
-    static unsigned long prevMillis = 0;
-    static unsigned long interval = TIMER_MINUTE;   // Інтервал у мілісекундах
-
-    buttonStart.tick();     // Опитування стану кнопки
-    if(buttonStart.click() && hours + minutes != 0)
+    // Функція відліку часу
+    void timerCounting()
     {
-        if (!timerRunning) 
-        {    
-            // Якщо таймер не запущено, то запускаємо його
-            timerRunning = true;
-        } 
-        else 
-        { 
-            // Інакше зупиняємо таймер і зупиняємо навантаження
-            timerRunning = false;
-            digitalWrite(CHARGE, LOW);
-        }
-    }
+        static unsigned long prevMillis = 0;
+        static unsigned long interval = TIMER_MINUTE;   // Інтервал у мілісекундах
 
-    if (timerRunning) 
-    {
-        if(hours + minutes == 0)
+        buttonStart.tick();     // Опитування стану кнопки
+        if(buttonStart.click() && hours + minutes != 0)
         {
-            digitalWrite(CHARGE, LOW);
-        }
-        
-        disp_ta.displayClock(hours, minutes);   // Виведення часу на дисплей
-        
-        unsigned long currentMillis = millis();
-        if (currentMillis - prevMillis >= interval) 
-        {
-            prevMillis = currentMillis;
-            if (minutes == 0) 
-            {   
-                // Якщо хвилини закінчилися, то зменшуємо годинник
-                if (hours > 0) 
-                {
-                    hours--;
-                    minutes = 59;
-                } 
-                else 
-                { 
-                    // Якщо і години закінчилися, то зупиняємо таймер
-                    timerRunning = false;
-                }
+            if (!timerRunning) 
+            {    
+                // Якщо таймер не запущено, то запускаємо його
+                timerRunning = true;
             } 
             else 
-            {  
-                // інакше зменшуємо хвилини
-                minutes--;
+            { 
+                // Інакше зупиняємо таймер і зупиняємо навантаження
+                timerRunning = false;
+                digitalWrite(CHARGE, LOW);
+            }
+        }
+
+        if (timerRunning) 
+        {
+            if(hours + minutes == 0)
+            {
+                digitalWrite(CHARGE, LOW);
+            }
+            
+            disp_ta.displayClock(hours, minutes);   // Виведення часу на дисплей
+            
+            unsigned long currentMillis = millis();
+            if (currentMillis - prevMillis >= interval) 
+            {
+                prevMillis = currentMillis;
+                if (minutes == 0) 
+                {   
+                    // Якщо хвилини закінчилися, то зменшуємо годинник
+                    if (hours > 0) 
+                    {
+                        hours--;
+                        minutes = 59;
+                    } 
+                    else 
+                    { 
+                        // Якщо і години закінчилися, то зупиняємо таймер
+                        timerRunning = false;
+                    }
+                } 
+                else 
+                {  
+                    // інакше зменшуємо хвилини
+                    minutes--;
+                }
             }
         }
     }
-}
 
+    // Функція для встановлення температури
+    void setTemperature(bool celsiusSign)
+    {
+        buttonTempUp.tick();    // Опитування стану кнопки температури +
+        buttonTempDown.tick();  // Опитування стану кнопки температури -
+
+        if (buttonTempUp.click())
+        {
+            temperature++;
+        }
+        else if (buttonTempUp.hold())
+        {
+            temperature += TEMP_STEP;
+            delay(TEMP_DELAY);
+        }
+        if (temperature > TEMP_MAX)
+        {
+            temperature = TEMP_MIN;
+        }
+        if (buttonTempDown.click())
+        {
+            temperature--;
+        }
+        else if (buttonTempDown.hold())
+        {
+            temperature -= TEMP_STEP;
+            delay(TEMP_DELAY);
+        }
+        if (temperature <= TEMP_MIN)
+        {
+            temperature = TEMP_MIN;
+        }
+        
+        int temp = temperature;     // Перетворення значення температури на ціле число
+
+        int tempone = temp / 10;    // Отримуємо десятки
+        int temptwo = temp % 10;    // Отримуємо одиниці
+
+        if(!celsiusSign)
+        {
+            disp_ds.display(3, temptwo);    // Виводимо одиниці
+            delay(5);   // додаємо невелику затримку
+            disp_ds.display(2, tempone);    // выводимо десятки
+        }
+        else
+        {
+            disp_ds.display(1, temptwo);    // Виводимо одиниці
+            delay(5);   // додаємо невелику затримку
+            disp_ds.display(0, tempone);    // выводимо десятки
+            disp_ds.displayByte(2, 0x39);   // Підставляємо знак Цельсія
+            delay(5);   // додаємо невелику затримку
+            disp_ds.displayByte(3, 0x63);   // Підставляємо знак градуса 
+        }
+    }
 
 };
 
