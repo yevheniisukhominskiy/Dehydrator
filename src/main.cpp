@@ -181,6 +181,7 @@ Dryer() :
         if (timerRunning) 
         {
             pollTemperatures();
+            turnOffRele();
             if(hours + minutes == 0)
             {
                 digitalWrite(CHARGE, LOW);
@@ -284,11 +285,26 @@ Dryer() :
             Serial.print(tempC);
             Serial.println("C");
             /*------------------------------*/
-            
+
             timerTemp = millis();
         }
     }
 
+    // Функція для вимкнення реле заряду при досягненні встановленої температури
+    void turnOffRele() 
+    {
+        // Перевіряємо, чи поточна температура (tempC) перевищує або дорівнює заданій температурі (temperature)
+        if(tempC >= temperature) 
+        {
+            digitalWrite(CHARGE, LOW);      // Якщо умова виконується, вимикаємо реле заряду (CHARGE)
+        }
+
+        // Перевіряємо, чи поточна температура (tempC) менша за задану температуру (temperature - TEMP_STEPON)
+        if(tempC <= temperature - TEMP_STEPON) 
+        {
+            digitalWrite(CHARGE, HIGH);     // Якщо умова виконується, увімкнемо реле заряду (CHARGE)
+        }
+    }
 
 };
 
