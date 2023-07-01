@@ -17,13 +17,13 @@ const byte numLeds = sizeof(ledPins) / sizeof(ledPins[0]);
 /*------------------------------------------------------------*/
 
 /*--------------------НАЛАШТУВАННЯ ЗНАЧЕНЬ--------------------*/
-#define TIMER_BRIGHTMESS 3      // Яскравість дисплея від (0-7)
-#define TIMER_DELEY 150         // Затримка додавння значень
+#define TIMER_BRIGHTNESS 3      // Яскравість дисплея від (0-7)
+#define TIMER_DELAY 100         // Затримка додавання значень
 #define TIMER_STEP 10           // Шаг для тривалому затисканню
 #define TIMER_MINUTE 72000      // Одна хвилина для таймеру
 
-#define TEMP_BRIGHTMESS 7       // Яскравість дисплея від (0-7)  
-#define TEMP_DELAY 300          // Затримка додавння значень 
+#define TEMP_BRIGHTNESS 7       // Яскравість дисплея від (0-7)  
+#define TEMP_DELAY 300          // Затримка додавання значень 
 #define TEMP_STEP 5             // Шаг для тривалому затисканню                                  
 #define TEMP_MAX 70             // Максимальна температура
 #define TEMP_MIN 20             // Мінімальна температура
@@ -53,7 +53,7 @@ private:
     EncButton<EB_TICK, 7> buttonTimerUp;    // Таймер додавання 
     EncButton<EB_TICK, 8> buttonTimerDown;  // Таймер віднімання
     EncButton<EB_TICK, 9> buttonMode;       // Вибір режиму
-    EncButton<EB_TICK, 10> buttonStart;      // Старт/стоп/блокування
+    EncButton<EB_TICK, 10> buttonStart;     // Старт/стоп/блокування
     /*--------------------------------------------------------------*/
 
     /*-----------------НАЛАШТУВАННЯ ОБ'ЄКТІВ ДИСПЛЕЇВ---------------*/
@@ -71,11 +71,12 @@ private:
     byte hours;         // Години
     byte minutes;       // Хвилини
     bool timerRunning;  // Статус таймера
-    float tempC;        // Зберігння температури для виводу
+    float tempC;        // Зберігання температури для виводу
     bool celsiusSign;   // Статус зміни режиму на дисплею температури
     bool setBlock;      // Блокування для зміни значень
     bool modeSection;   // Вибір режиму авто-руч
-    byte activeLed;      // Активний світлодіод
+    bool timerStopped;  // Якщо відсутній датчик
+    byte activeLed;     // Активний світлодіод
     /*--------------------------------------------------------------*/
 
 public:
@@ -98,16 +99,18 @@ Dryer() :
         celsiusSign(false),
         setBlock(false),
         modeSection(true),                     // true - AUTOMATIC, false - MANUAL
+        timerStopped(false),
         activeLed(0)
     {}
+
     void setup() 
     {
         Serial.begin(9600);                     // Монітор порта для налагодження
         sensors.begin();                        // Визов функції об'єкту 
         pinMode(CHARGE, OUTPUT);                // Ініціалізація вихідного навантаження
-        disp_ds.brightness(TEMP_BRIGHTMESS);    // Яскравість дисплею температури
-        disp_ta.brightness(TIMER_BRIGHTMESS);   // Яскравість дисплею таймеру
-        for (byte i = 0; i < numLeds; i++)       // Ініціалізації ствітлодіодів
+        disp_ds.brightness(TEMP_BRIGHTNESS);    // Яскравість дисплею температури
+        disp_ta.brightness(TIMER_BRIGHTNESS);   // Яскравість дисплею таймеру
+        for (byte i = 0; i < numLeds; i++)      // Ініціалізації світлодіодів
         {
             pinMode(ledPins[i], OUTPUT);
             digitalWrite(ledPins[i], LOW);
@@ -120,80 +123,79 @@ Dryer() :
         if(setBlock == false)
         {
             setTimer();                     // Функція для встановлення часу на таймері
-            modeSelection();                // Функція для встановлення температури автоматичний (режими)
+            setTemperatureAuto(celsiusSign);
+            setTemperatureManual(celsiusSign);
         }
         timerCounting();    // Функція відліку часу
     }
 
-    // Функція для встановлення часу на таймері
     void setTimer()
     {
-        buttonTimerUp.tick();       // Опитуємо стан кнопки "Збільшити час"
-        buttonTimerDown.tick();     // Опитуємо стан кнопки "Зменшити час"
+        buttonTimerUp.tick();
+        buttonTimerDown.tick();
 
         if (buttonTimerUp.click())
         {
             minutes += TIMER_STEP;
-            if(minutes == 60)
+            if (minutes >= 60)
             {
+                hours += minutes / 60;
                 minutes = 0;
-                hours++;
-            }
-            else if(hours >= 24)
-            {
-                hours = 0;
-                minutes = 0;
+                if (hours >= 24)
+                {
+                    hours = 0;
+                }
             }
         }
-        else if(buttonTimerUp.hold())
+        else if (buttonTimerUp.hold())
         {
             minutes += TIMER_STEP;
-            delay(TIMER_DELEY);
-            if(minutes == 60)
+            delay(TIMER_DELAY);
+            if (minutes >= 60)
             {
+                hours += minutes / 60;
                 minutes = 0;
-                hours++;
-            }
-            else if(hours >= 24)
-            {
-                hours = 0;
-                minutes = 0;
+                if (hours >= 24)
+                {
+                    hours = 0;
+                }
             }
         }
 
-        if (buttonTimerDown.click()) 
+        if (buttonTimerDown.click())
         {
-           if(minutes > 0)
-           {
-            minutes -= TIMER_STEP;
-           }
-           else
-           {
-                if(hours > 0)
-                {
-                    hours--;
-                    minutes = 60 - TIMER_STEP;
-                }
-           }
-        }
-        else if(buttonTimerDown.hold())
-        {
-            if(minutes > 0)
-           {
+            if (minutes >= TIMER_STEP)
+            {
                 minutes -= TIMER_STEP;
-                delay(TIMER_DELEY);
-           }
-           else
-           {
-                if(hours > 0)
+            }
+            else
+            {
+                if (hours > 0)
                 {
                     hours--;
                     minutes = 60 - TIMER_STEP;
                 }
-           }
+            }
         }
-        disp_ta.displayClock(hours, minutes);   // Виведення часу на дисплей
+        else if (buttonTimerDown.hold())
+        {
+            if (minutes >= TIMER_STEP)
+            {
+                minutes -= TIMER_STEP;
+                delay(TIMER_DELAY);
+            }
+            else
+            {
+                if (hours > 0)
+                {
+                    hours--;
+                    minutes = 60 - TIMER_STEP;
+                }
+            }
+        }
+        disp_ta.displayClock(hours, minutes);
     }
+
 
     // Функція відліку часу
     void timerCounting()
@@ -266,28 +268,10 @@ Dryer() :
         }
     }
 
-    // Функція вибору рижиму авто/руч
-    void modeSelection()
+    void setTemperatureAuto(bool celsiusSign)
     {
         buttonMode.tick();
 
-        if(buttonMode.held())
-        {
-            modeSection = !modeSection;
-        }
-
-        if(modeSection == true)
-        {
-            setTemperatureAuto(celsiusSign);           // Функція для встановлення температури автоматичний
-        }
-        else
-        {
-            setTemperatureManual(celsiusSign);    // Функція для встановлення температури ручний
-        }
-    }
-
-    void setTemperatureAuto(bool celsiusSign)
-    {
         if (buttonMode.click()) 
         {
             digitalWrite(ledPins[activeLed], LOW);      // Вимикаємо попередній світлодіод
@@ -298,35 +282,51 @@ Dryer() :
             {
             case modesTemperature::APPLES:
                 Serial.println("Режим: Яблука");
-                temperature = 70;
+                temperature = 65;
+                hours = 8;
+                minutes = 0;
                 break;
             case modesTemperature::PEARS:
-                Serial.println("Режим: Груши");
-                temperature = 65;
+                Serial.println("Режим: Груші");
+                temperature = 50;
+                hours = 10;
+                minutes = 0;
                 break;
             case modesTemperature::CHERRY:
                 Serial.println("Режим: Вишні");
-                temperature = 70;
+                temperature = 60;
+                hours = 7;
+                minutes = 0;
                 break;
             case modesTemperature::BERRIES:
                 Serial.println("Режим: Ягоди");
                 temperature = 50;
+                hours = 10;
+                minutes = 0;
                 break;
             case modesTemperature::MUSHROOMS:
                 Serial.println("Режим: Гриби");
                 temperature = 50;
+                hours = 7;
+                minutes = 0;
                 break;
             case modesTemperature::MEAT:
                 Serial.println("Режим: М'ясо");
                 temperature = 45;
+                hours = 8;
+                minutes = 0;
                 break;
             case modesTemperature::HERBS:
                 Serial.println("Режим: Трави");
                 temperature = 35;
+                hours = 6;
+                minutes = 0;
                 break;
             case modesTemperature::ROSEHIP:
                 Serial.println("Режим: Шипшина");
                 temperature = 55;
+                hours = 10;
+                minutes = 0;
                 break;
             default:
                 Serial.println("Помилка вибору режиму!");
@@ -348,9 +348,10 @@ Dryer() :
         {
             disp_ds.display(1, temptwo);    // Виводимо одиниці
             disp_ds.display(0, tempone);    // выводимо десятки
-            disp_ds.displayByte(2, 0x39);   // Підставляємо знак Цельсія
-            disp_ds.displayByte(3, 0x63);   // Підставляємо знак градуса 
+            disp_ds.displayByte(2, 0x63);   // Підставляємо знак Цельсія
+            disp_ds.displayByte(3, 0x39);   // Підставляємо знак градуса 
         }
+        disp_ta.displayClock(hours, minutes);
     }
 
     // Функція для встановлення температури
@@ -402,8 +403,8 @@ Dryer() :
         {
             disp_ds.display(1, temptwo);    // Виводимо одиниці
             disp_ds.display(0, tempone);    // выводимо десятки
-            disp_ds.displayByte(2, 0x39);   // Підставляємо знак Цельсія
-            disp_ds.displayByte(3, 0x63);   // Підставляємо знак градуса 
+            disp_ds.displayByte(2, 0x63);   // Підставляємо знак Цельсія
+            disp_ds.displayByte(3, 0x39);   // Підставляємо знак градуса
         }
     }
 
@@ -414,13 +415,32 @@ Dryer() :
         if(millis() - timerTemp >= TEMP_QUIZ)
         {
             sensors.requestTemperatures();          // Запитуємо дані з датчика
-            tempC = sensors.getTempCByIndex(0);     // Зчитуємо температуру і зберегти її в змінній tempС
-
-            /*---------НАЛАГОДЖЕННЯ---------*/
-            Serial.print("Temperature: ");
-            Serial.print(tempC);
-            Serial.println("C");
-            /*------------------------------*/
+            float tempC = sensors.getTempCByIndex(0);     // Зчитуємо температуру і зберегти її в змінній tempС
+            if (tempC == -127)
+            {
+                /*---------НАЛАГОДЖЕННЯ---------*/
+                Serial.println("Temperature retrieval error.");
+                hours = 0;
+                minutes = 0;
+                disp_ds.displayByte(0x00, _E, _r, _r);
+                static uint32_t sensError = millis();
+                if(millis() - sensError >= 5000)
+                {
+                    timerRunning = false;
+                    disp_ds.displayByte(0x00, 0x00, 0x00, 0x00);
+                    temperature = TEMP_MIN;
+                    sensError = millis();
+                }
+                /*------------------------------*/
+            }
+            else
+            {
+                /*---------НАЛАГОДЖЕННЯ---------*/
+                Serial.print("Temperature: ");
+                Serial.print(tempC);
+                Serial.println("C");
+                /*------------------------------*/
+            }
 
             timerTemp = millis();
         }
