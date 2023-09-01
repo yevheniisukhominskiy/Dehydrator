@@ -3,9 +3,12 @@
 </p>
 
 <p align="center">
-    <img src="https://img.shields.io/github/v/release/yevheniisukhominskiy/Dehydrator?style=for-the-badge
-" alt="Version">
-    <img src="https://img.shields.io/github/license/yevheniisukhominskiy/Dehydrator?style=for-the-badge" alt="License">
+    <img src="https://img.shields.io/github/v/release/yevheniisukhominskiy/Dehydrator?style=for-the-badge" alt="Version">
+    <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/yevheniisukhominskiy/Dehydrator/total?style=for-the-badge">
+    <img alt="GitHub code size in bytes" src="https://img.shields.io/github/languages/code-size/yevheniisukhominskiy/Dehydrator?style=for-the-badge">
+     <img src="https://img.shields.io/github/license/yevheniisukhominskiy/Dehydrator?style=for-the-badge" alt="License">
+
+
 </p>
 
 ## Content
