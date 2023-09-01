@@ -1,49 +1,35 @@
-# Dryer - Vegetable Dehydrator
-Dryer is an open-source project that aims to provide a solution for efficiently dehydrating vegetables. The project focuses on building a robust and user-friendly vegetable dehydrator using C++ and Arduino Framework.
+<p align="center">
+   <img src="https://i.ibb.co/whXfm0b/Dehydrator.png" alt="Dehydrator" border="0" wight="700">
+</p>
+
+<p align="center">
+    <img src="https://img.shields.io/github/v/release/yevheniisukhominskiy/Dehydrator?style=for-the-badge
+" alt="Version">
+    <img src="https://img.shields.io/github/license/yevheniisukhominskiy/Dehydrator?style=for-the-badge" alt="License">
+</p>
 
 ## Content
-1. [Features](https://github.com/yevheniisukhominskiy/Dryer#features)
-2. [Prerequisites](https://github.com/yevheniisukhominskiy/Dryer#prerequisites)
-3. [Device selection](https://github.com/yevheniisukhominskiy/Dryer#device-selection)
-   1. [LGT8F328P](https://github.com/yevheniisukhominskiy/Dryer#lgt8g328p)
-4. [We need](https://github.com/yevheniisukhominskiy/Dryer#we-need)
-5. [Connection](https://github.com/yevheniisukhominskiy/Dryer#connection)
-   1. [Display for sensor](https://github.com/yevheniisukhominskiy/Dryer#display-for-sensor)
-      1. [Buttons for sensor](https://github.com/yevheniisukhominskiy/Dryer#buttons-for-sensor)
-   2. [Display for timer](https://github.com/yevheniisukhominskiy/Dryer#display-for-timer)
-      1. [Buttons for timer](https://github.com/yevheniisukhominskiy/Dryer#buttons-for-timer)
-   3. [Control buttons](https://github.com/yevheniisukhominskiy/Dryer#control-buttons)
-   4. [Sensor](https://github.com/yevheniisukhominskiy/Dryer#sensor)
-   5. [Charge](https://github.com/yevheniisukhominskiy/Dryer#charge)
-6. [Getting Started](https://github.com/yevheniisukhominskiy/Dryer#getting-started)
-7. [Versions](https://github.com/yevheniisukhominskiy/Dryer#versions)
-8.  [Plans](https://github.com/yevheniisukhominskiy/Dryer#plans)
-9.  [License](https://github.com/yevheniisukhominskiy/Dryer#license)
-10. [Contact](https://github.com/yevheniisukhominskiy/Dryer#contact)
-11. [Denial of responsibility](https://github.com/yevheniisukhominskiy/Dryer#denial-of-responsibility)
+1. [Overview](https://github.com/yevheniisukhominskiy/Dehydrator#overview)
+2. [Documentation](https://github.com/yevheniisukhominskiy/Dehydrator#documentation)
+   1. [Device selection](https://github.com/yevheniisukhominskiy/Dehydrator#device-selection)
+   2. [Connection](https://github.com/yevheniisukhominskiy/Dehydrator#connection)
+   3. [Modules](https://github.com/yevheniisukhominskiy/Dehydrator#modules)
+3. [Distribution](https://github.com/yevheniisukhominskiy/Dehydrator#distribution)
+4. [Developers](https://github.com/yevheniisukhominskiy/Dehydrator#developers)
+5. [License](https://github.com/yevheniisukhominskiy/Dehydrator#license)
+6. [Warning](https://github.com/yevheniisukhominskiy/Dehydrator#warning)
 
-## Features
-* Efficient Dehydration: Dryer employs advanced techniques to effectively dehydrate vegetables, ensuring optimal preservation of nutrients while extending their shelf life.
-  
-* Temperature Control: The dehydrator is equipped with a precise temperature control system, allowing users to set and maintain the desired temperature for optimal dehydration.
-  
-* Adjustable Drying Time: Users can adjust the drying time according to the specific requirements of different vegetables, ensuring consistent results.
-  
-* Easy-to-Use Interface: Dryer incorporates a user-friendly interface, making it intuitive for both novice and experienced users to operate the dehydrator effortlessly.
-  
-* Error Handling: The system includes comprehensive error handling mechanisms to handle unexpected situations and ensure reliable and safe operation.
 
-## Prerequisites
-Before you begin, make sure you have the following prerequisites installed on your system:
+## Overview
 
-* PlatformIO IDE: Install the [PlatformIO IDE](platformio.org), which is an extension for Visual Studio Code. Visual Studio Code is a popular code editor that provides a powerful and feature-rich environment for development. Install [Visual Studio Code]([platformio.org](https://code.visualstudio.com/)) and then search for the PlatformIO extension in the Visual Studio Code Marketplace.
+A dehydrator is an exceptional drying device that doesn't just dry fruits and vegetables but does so evenly, with high quality, and at a specified temperature.
 
-* Arduino Board: Obtain an Arduino board compatible with the Vegetable Dehydrators project. The project may require a specific Arduino board model or a compatible variant.
+Dehydrators are also known as drying machines. Their principle of operation is quite simple. Inside the chamber, there is a heating element that generates heat, and a fan evenly distributes this heat. As a result, when placed in the device for an extended period, the products lose moisture without undergoing roasting or baking.
 
-* Git: Install Git on your system to clone the project repository and manage your code changes effectively.
+## Documentation
 
-## Device selection
-The project was developed using the LGT8F328P-LQFP48 microcontroller as its foundation. This microcontroller offers a range of features and capabilities that make it suitable for the vegetable dehydrators project. **The use of other boards based on AVR is possible with errors. Be carefull!**
+### Device selection
+The project was developed based on the LGT8F328P-LQFP48 microcontroller. This microcontroller offers a range of features and capabilities that make it suitable for a vegetable dehydrator project. Starting from version 2.0, support for the AVR platform is available.
 
 To select the device for the Vegetable Dehydrators project in PlatformIO, follow these steps:
 1. Open the platformio.ini file.
@@ -56,109 +42,91 @@ platform = lgt8f
 board = lgt8f328p-LQFP48
 framework = arduino
 lib_deps = 
-	gyverlibs/EncButton@^2.0
-	gyverlibs/GyverTM1637@^1.4.2
 	milesburton/DallasTemperature@^3.11.0
-	gyverlibs/GyverTimers@^1.10
+	gyverlibs/EncButton@^3.0
+	gyverlibs/GyverTM1637@^1.4.2
 ```
-**Expect other microcontrollers in future releases.**
 
-## We need
-**Modules**
-* 1x Arduino Board: **LGT8F328P**
-* 2x Digital Display: **TM1637**
-* 1x Temperature Sensor: **DS18B20**
-* 6x Button Interface:	**TACT 12x12**
-* 8x LED Indicator: **600-800 mCd**
+### Arduino Nano
+```ini
+[env:nanoatmega328]
+platform = atmelavr
+board = nanoatmega328
+framework = arduino
+lib_deps = 
+	milesburton/DallasTemperature@^3.11.0
+	gyverlibs/EncButton@^3.0
+	gyverlibs/GyverTM1637@^1.4.2
+```
 
-**Libraries**
-* EncButton
-* GyverTM1637
-* DallasTemperature
-* GyverTimers
-
-PlatformIO will automatically download and install the specified libraries and their dependencies when you build your project. The main thing is to save the file `platformio.ini`
-
-## Connection
-
-### Display for sensor
-| **TM1637** | **LGT8F328P** |
-|------------|---------------|
-| CLK    	 | D4        	 |
-| DIO    	 | D3        	 |
-| GND    	 | GND       	 |
-| 5V     	 | 5V        	 |
-
-### Buttons for sensor
-| **BUTTON-PLUS** | **LGT8F328P** | **BUTTON-MINUS** | **LGT8F328P** |
-|-----------------|---------------|------------------|---------------|
-| 5V              | D5            | 5V               | D6            |
-| GND             | GND           | GND              | GND           |
-
-### Display for timer
-| **TM1637** | **LGT8F328P** |
-|------------|---------------|
-| CLK        | D13       	 |
-| DIO    	 | D2        	 |
-| GND    	 | GND      	 |
-| 5V     	 | 5V       	 |
-
-### Buttons for timer
-| **BUTTON-PLUS** | **LGT8F328P** | **BUTTON-MINUS** | **LGT8F328P** |
-|-----------------|---------------|------------------|---------------|
-| 5V              | D7            | 5V               | D8            |
-| GND             | GND           | GND              | GND           |
-
-### Control buttons
-| **BUTTON-MODE** | **LGT8F328P** | **BUTTON-START** | **LGT8F328P** |
-|-----------------|---------------|------------------|---------------|
-| 5V              | D9            | 5V               | D10           |
-| GND             | GND           | GND              | GND           |
-
-### Sensor
-| **DS18B20** | **LGT8F328P** |
-|-------------|---------------|
-| VCC         | 5V            |
-| DQ          | D12           |
-| GND         | GND           |
-
-**The only thing that needs to be added from the external additional strapping is a 4.7 kΩ pull-up resistor.**
-
-### Charge
-| **RELE** | **LGT8F328P** |
-|----------|---------------|
-| 5V       | 5V            |
-| GND      | GND           |
-
-**Also put a 220Ω resistor.**
+### Arduino Uno
+```ini
+[env:uno]
+platform = atmelavr
+board = uno
+framework = arduino
+lib_deps = 
+	milesburton/DallasTemperature@^3.11.0
+	gyverlibs/EncButton@^3.0
+	gyverlibs/GyverTM1637@^1.4.2
+```
 
 
-## Getting Started
-To get started with the dryer project, follow these steps:
+### Connection
+![Alt text](documents/conections.png)
 
-1. Clone the repository:  
-    `git clone https://github.com/yevheniisukhominskiy/dryer.git`
-2. Open PlatformIO IDE: Launch Visual Studio Code and open the PlatformIO IDE. You can find the PlatformIO IDE extension in the left sidebar of Visual Studio Code.
-3. Configure the Project: After opening the project, you need to configure it for the specific Arduino board you are using. Open the _platformio.ini_ file in the root of your project directory. Set the board type and other configuration options according to the requirements of the Vegetable Dehydrators project.
-4. Install the necessary dependencies mentioned.
-5. Build and Upload the Project: Connect your Arduino board to your computer using a USB cable. In the PlatformIO IDE, click on the "Build" button to compile the project code. Once the compilation is successful, click on the "Upload" button to flash the compiled code onto the Arduino board.
+Connection view is available [here](https://wokwi.com/projects/new/arduino-nano)
+#### Buttons
+| **Microcontroller** | **BUTTON-START** | **BUTTON-TEMP** | **BUTTON-TIMER** | **BUTTON-PLUS** | **BUTTON-PLUS** | **BUTTON-BLACKLIGHT** |
+|---------------------|-----------------|------------------|------------------|-----------------|-----------------|-----------------------|
+| 5V                  | D7              | D6               | D5               |	D4			    | D3              | D2                    |
+| GND                 | GND             | GND              | GND              | GND             | GND             | GND                   |
 
-## Versions
-* v. 1.0 - major release.
+#### Leds for button
+| **Controller** | **LED-TEMP** | **LED-TIMER** |
+|----------------|--------------|---------------|
+| PIN            | A1           | A2            |
+| GND            | GND          | GND           |
 
-## Plans
-- [ ] Create a graphic version of connecting modules.
-- [ ] Add multi-platform AVR and STM microcontrollers
-- [ ] Optimize the project by using own libraries
+#### Relays
+| **Controller** | **RELAY-HEATER** | **RELAY-COOLER** | **RELAY-LEDS** |
+|----------------|------------------|------------------|----------------|
+| 5V             | VCC              | VCC              | VCC            |
+| GND            | GND              | GND              | GND            |
+| PIN            | D10              | A0               | D9             |
+
+#### Others
+| **Controller** | **DS18B20** | **TM1637** |
+|----------------|-------------|------------|
+| 5V             | VCC         | VCC        |
+| GND            | GND         | GND        |
+| PIN            | DQ -> 8     | DIO -> 11  |
+| PIN            | -           | CLK -> 12  |
+
+### Modules
+* 1x Board: LGT8F328P or AVR
+* 1x Digital Display: TM1637
+* 1x Temperature Sensor: DS18B20
+* 6x Button Interface: TACT 12x12
+* 2x LED Indicator: 600-800 mCd
+* 3x Rele 12V
+  
+## Distribution
+- Available only here
+
+
+## Developers
+- [Yevhenii Sukhominskiy]([GitHub Profile Link](https://github.com/yevheniisukhominskiy))
 
 ## License
-dryer is released under the [MIT License](https://github.com/yevheniisukhominskiy/dryer/blob/main/LICENSE.txt). You are free to use, modify, and distribute the project as per the terms of the license.
+Project Dehydrator is distributed under the MIT license.
 
-## Contact
-If you have any questions, suggestions, or feedback, please feel free to reach out to the project maintainer, Yevhenii Sukhominskiy, at yevhenii.sukhominskiy@gmail.com.
+## Warning
+1. By using this project, you agree to the "Disclaimer" and take full responsibility that may be placed upon you.
+2. The information provided is for users' free knowledge on topics that may be of interest to them.
+3. The author is not responsible for the relevance, accuracy, completeness, or quality of the provided information. Any claims or complaints regarding material or moral damage due to the use or non-use of the information provided, including the use of incorrect or incomplete information, are entirely excluded.
 
-## Denial of responsibility
-All information is for personal use only.
-The team does not accept any responsibility for any damage that may be caused in any form due to the use, incompleteness or incorrectness of the information posted on this project.
 
-**I am hope you find the dryer project useful and efficient in your vegetable dehydration endeavors!**
+
+
+

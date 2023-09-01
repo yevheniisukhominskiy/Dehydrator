@@ -1,64 +1,52 @@
 #include <Arduino.h>
-#include <EncButton.h>
+#include "core/Button.h"
 #include <GyverTM1637.h>
 #include <DallasTemperature.h>
 #include <OneWire.h>
+#include <EEPROM.h>
 
 /*--------------НАЛАШТУВАННЯ ПІНІВ ІНІЦІАЛІЗАЦІЇ--------------*/
-#define CLK_DS 4           // CLK датчик
-#define DIO_DS 3           // DIO датчик
-#define CLK_TA 13           // CLK таймер
-#define DIO_TA 2           // DIO таймер
-#define CHARGE 11            // Навантаження реле
-#define DS18B20 12       // Датчик
+#define CLK 12              // CLK дисплею
+#define DIO 11              // DIO дисплею
+#define DS18B20 8           // Датчик
+#define HEATER 10           // Нагрівач
+#define COOLER 14           // Кулер
+#define LEDS 9              // Підсвітлювач печі
+#define TIMER_LED 16        // Світлодіод кнопки таймера
+#define TEMP_LED 15         // Світлодіод кнопки температури
+/*------------------------------------------------------------*/
 
-const byte ledPins[] = {14, 15, 16, 17, 18, 19, 20, 21};
-const byte numLeds = sizeof(ledPins) / sizeof(ledPins[0]);
+/*--------------------НАЛАШТУВАННЯ ЗНАЧЕНЬ--------------------*/    
+#define BRIGHTNESS 7            // Яскравість дисплея від (0-7)
+
+#define TIMER_STEP 30           // Шаг зміни таймера
+#define TIMER_MINUTE 70000      // Хвилина в мс
+
+#define TEMP_STEP 5             // Шаг зміни температури
+#define TEMP_MAX 70             // Максимальна температура
+#define TEMP_MIN 0              // Мінімальна температура
+#define TEMP_QUIZ 10000         // Час опитування датчика
+#define TEMP_STEPON 1           // Шаг для увімкнення реле
 /*------------------------------------------------------------*/
 
 /*--------------------НАЛАШТУВАННЯ ЗНАЧЕНЬ--------------------*/
-#define TIMER_BRIGHTNESS 3      // Яскравість дисплея від (0-7)
-#define TIMER_DELAY 100         // Затримка додавання значень
-#define TIMER_STEP 10           // Шаг для тривалому затисканню
-#define TIMER_MINUTE 72000      // Одна хвилина для таймеру
-
-#define TEMP_BRIGHTNESS 7       // Яскравість дисплея від (0-7)  
-#define TEMP_DELAY 300          // Затримка додавання значень 
-#define TEMP_STEP 5             // Шаг для тривалому затисканню                                  
-#define TEMP_MAX 70             // Максимальна температура
-#define TEMP_MIN 20             // Мінімальна температура
-#define TEMP_STEPON 1           // Шаг для увімкнення реле
-#define TEMP_QUIZ 10000          // Час опитування датчика
+#define ADDR_TEMPERATURE 0  // Адресса для зберігання температури користувача
 /*------------------------------------------------------------*/
 
-/*---------------------АВТОМАТИЧНІ РЕЖИМИ---------------------*/
-enum modesTemperature
-{
-    APPLES,     // Яблука
-    PEARS,      // Груші
-    CHERRY,     // Вишні
-    BERRIES,    // Ягоди
-    MUSHROOMS,  // Гриби
-    MEAT,       // М'ясо
-    HERBS,      // Трави
-    ROSEHIP     // Шипшина
-};
-/*------------------------------------------------------------*/
 class Dryer
 {
 private:
     /*-----------------НАЛАШТУВАННЯ ОБ'ЄКТІВ КНОПОК-----------------*/  
-    EncButton<EB_TICK, 5> buttonTempUp;     // Температура додавання    
-    EncButton<EB_TICK, 6> buttonTempDown;   // Температура віднімання 
-    EncButton<EB_TICK, 7> buttonTimerUp;    // Таймер додавання 
-    EncButton<EB_TICK, 8> buttonTimerDown;  // Таймер віднімання
-    EncButton<EB_TICK, 9> buttonMode;       // Вибір режиму
-    EncButton<EB_TICK, 10> buttonStart;     // Старт/стоп/блокування
+    Button buttonStart;
+    Button buttonTemperatureMode;
+    Button buttonTimerMode;
+    Button buttonAdd;
+    Button buttonSubstact;
+    Button buttonBacklight;
     /*--------------------------------------------------------------*/
 
     /*-----------------НАЛАШТУВАННЯ ОБ'ЄКТІВ ДИСПЛЕЇВ---------------*/
-    GyverTM1637 disp_ds;            // Дисплей температури	
-    GyverTM1637 disp_ta;            // Дисплей таймеру
+    GyverTM1637 display;            // Ініціалізація об'єкта дисплею	
     /*--------------------------------------------------------------*/
 
     /*-----------НАЛАШТУВАННЯ ОБ'ЄКТІВ ДАТЧИКА ТЕМПЕРАТУРИ----------*/
@@ -67,176 +55,305 @@ private:
     /*--------------------------------------------------------------*/
 
     /*----------------------ЗБЕРІГАННЯ ЗМІННИХ----------------------*/
-    float temperature;  // Температура
-    byte hours;         // Години
-    byte minutes;       // Хвилини
-    bool timerRunning;  // Статус таймера
-    float tempC;        // Зберігання температури для виводу
-    bool celsiusSign;   // Статус зміни режиму на дисплею температури
-    bool setBlock;      // Блокування для зміни значень
-    bool modeSection;   // Вибір режиму авто-руч
-    bool timerStopped;  // Якщо відсутній датчик
-    byte activeLed;     // Активний світлодіод
+    byte hours;                     // Параметр годин
+    byte minutes;                   // Параметр хвилин
+    byte temperature;               // Параметр температури
+    byte prevTemperature;           // Змінена температура (для EEPROM)
+    
+    float realTemperature;          // Зберігання температури для виводу
+    bool timerStopped;              // Якщо відсутній датчик
     /*--------------------------------------------------------------*/
 
+    /*---------------------------СИСТЕМНЕ---------------------------*/
+    bool systemBlock;               // Системне блокування
+    bool temperatureMode;           // Режим температури
+    bool timerMode;                 // Режим таймера
+    bool timerRunning;              // Перевірка на таймер
+    bool backlightState;            // Пісвітлення
+    int ledState;                   // Стан світлодіодів
+    long previousMillis;            // Для зберігання часу таймеру millis()
+    /*--------------------------------------------------------------*/
 public:
-Dryer() :
-        buttonTempUp(),
-        buttonTempDown(),
-        buttonTimerUp(),
-        buttonTimerDown(),
-        buttonMode(),
-        buttonStart(),
-        disp_ds(CLK_DS, DIO_DS),
-        disp_ta(CLK_TA, DIO_TA),
+    Dryer() :
+        // Ініціалізація об'єктів кнопок
+        buttonStart(7),
+        buttonTemperatureMode(6),
+        buttonTimerMode(5),
+        buttonAdd(4),
+        buttonSubstact(3),
+        buttonBacklight(2),
+
+        // Ініціалізація об'єкту дисплею
+        display(CLK, DIO),
+
+        // Ініціалізація об'єктів датчика
         oneWire(DS18B20),
         sensors(&oneWire),
-        temperature(TEMP_MIN),
+
+        // Ініціалізація користуваціких параметрів
         hours(0),
         minutes(0),
+        temperature(TEMP_MIN),
+        prevTemperature(0),
+
+        // Системне
+        systemBlock(false),
+        temperatureMode(false),
+        timerMode(true),
         timerRunning(false),
-        tempC(),
-        celsiusSign(false),
-        setBlock(false),
-        modeSection(true),                     // true - AUTOMATIC, false - MANUAL
-        timerStopped(false),
-        activeLed(0)
+        backlightState(false),
+        ledState(LOW),
+        previousMillis(0)
     {}
 
     void setup() 
     {
-        Serial.begin(9600);                     // Монітор порта для налагодження
-        sensors.begin();                        // Визов функції об'єкту 
-        pinMode(CHARGE, OUTPUT);                // Ініціалізація вихідного навантаження
-        disp_ds.brightness(TEMP_BRIGHTNESS);    // Яскравість дисплею температури
-        disp_ta.brightness(TIMER_BRIGHTNESS);   // Яскравість дисплею таймеру
-        for (byte i = 0; i < numLeds; i++)      // Ініціалізації світлодіодів
-        {
-            pinMode(ledPins[i], OUTPUT);
-            digitalWrite(ledPins[i], LOW);
-        }
+        // Ініціалізація монітор-порта
+        Serial.begin(9600);
+        // Визов функції ініалізації датчика
+        sensors.begin();
+        // Налаштування яскравості екрану дисплея
+        display.brightness(BRIGHTNESS);
+
+        // Ініціалізація кулера
+        pinMode(COOLER, OUTPUT);
+        // Ініціалізація порту нагрівача
+        pinMode(HEATER, OUTPUT);
+        // Ініціалізація підсвітлювача
+        pinMode(LEDS, OUTPUT);
+        // Ініціалізація світлодіода на кнопку таймера
+        pinMode(TIMER_LED, OUTPUT);
+        // Ініціалізація світлодіода на кнопку температури
+        pinMode(TEMP_LED, OUTPUT);
+
+        // Синхранізація колишньої користувацької температури
+        temperature = EEPROM.read(ADDR_TEMPERATURE);
+        // Вивід таймера на дисплей
+        display.displayClock(hours, minutes);
     }
 
-    void loop() 
+    void loop()
     {
-        // Блокування по кнопці старту (при тривалому натисканні)
-        if(setBlock == false)
-        {
-            setTimer();                     // Функція для встановлення часу на таймері
-            setTemperatureAuto(celsiusSign);
-            setTemperatureManual(celsiusSign);
-        }
-        timerCounting();    // Функція відліку часу
+        ledBlinking(timerMode, temperatureMode);    // Функція блимання світлодіодів кнопок підсвітлення
+        switchMode(systemBlock);                    // Функція вибору режиму
+        backlight();                                // Функція підсвітлювача печі
+        timerCounting();                            // Функція відліку часу
     }
 
-    void setTimer()
+    // Функція вибору режиму
+    void switchMode(bool block)
     {
-        buttonTimerUp.tick();
-        buttonTimerDown.tick();
+        // Перевірка на системне блокування
+        if (block == false)
+        {
+            // Опитуємо кнопку температури
+            buttonTemperatureMode.tick();
+            // Опитуємо кнопку таймера
+            buttonTimerMode.tick();
 
-        if (buttonTimerUp.click())
-        {
-            minutes += TIMER_STEP;
-            if (minutes >= 60)
+            // Якщо натистута кнопка температури
+            if (buttonTemperatureMode.click())
             {
-                hours += minutes / 60;
-                minutes = 0;
-                if (hours >= 24)
-                {
-                    hours = 0;
-                }
+                // Дозвіл на зміну температури
+                temperatureMode = true;
+                // Заборона на зміну часу таймеру
+                timerMode = false;
             }
-        }
-        else if (buttonTimerUp.hold())
-        {
-            minutes += TIMER_STEP;
-            delay(TIMER_DELAY);
-            if (minutes >= 60)
+            // Якщо натистута кнопка таймеру
+            if (buttonTimerMode.click())
             {
-                hours += minutes / 60;
-                minutes = 0;
-                if (hours >= 24)
-                {
-                    hours = 0;
-                }
+                // Дозвіл на зміну часу таймера
+                timerMode = true;
+                // Заборона на зміну температури
+                temperatureMode = false;
             }
-        }
 
-        if (buttonTimerDown.click())
-        {
-            if (minutes >= TIMER_STEP)
-            {
-                minutes -= TIMER_STEP;
-            }
-            else
-            {
-                if (hours > 0)
-                {
-                    hours--;
-                    minutes = 60 - TIMER_STEP;
-                }
-            }
+            // Дозвіл на зміну температури
+            if (temperatureMode == true) setTemperature(systemBlock);
+            // Дозвіл на зміну часу таймера
+            else if (timerMode == true) setTimer(systemBlock);
         }
-        else if (buttonTimerDown.hold())
-        {
-            if (minutes >= TIMER_STEP)
-            {
-                minutes -= TIMER_STEP;
-                delay(TIMER_DELAY);
-            }
-            else
-            {
-                if (hours > 0)
-                {
-                    hours--;
-                    minutes = 60 - TIMER_STEP;
-                }
-            }
-        }
-        disp_ta.displayClock(hours, minutes);
     }
 
+    // Функція блимання світлодіодів кнопок підсвітлення
+    void ledBlinking(bool timerState, bool tempState)
+    {
+        // Якщо таймер не працює
+        if (timerRunning == false)
+        {
+            unsigned long currentMillis = millis();
+            if(currentMillis - previousMillis > 1000) 
+            {
+                // Зберігаємо час останнього перемикання
+                previousMillis = currentMillis; 
+            
+                // Якщо світлодіод не горить, то запалюємо
+                if (ledState == LOW) ledState = HIGH;
+                // І навпаки
+                else ledState = LOW; 
+                // Встановлюємо стани виходу, щоб увімкнути або вимкнути світлодіод
+                if (timerState == true ) digitalWrite(TIMER_LED, ledState);
+                // Інакше працює підсвітлення без блимання
+                else digitalWrite(TIMER_LED, HIGH);
+                // Встановлюємо стани виходу, щоб увімкнути або вимкнути світлодіод
+                if (tempState == true ) digitalWrite(TEMP_LED, ledState);
+                // Інакше працює підсвітлення без блимання
+                else digitalWrite(TEMP_LED, HIGH);
+            }
+        }
+        // Інакше працює підсвітлення без блимання
+        else
+        {
+            digitalWrite(TIMER_LED, HIGH);
+            digitalWrite(TEMP_LED, HIGH);
+        }
+    }
+
+    // Функція режиму користувацького таймера
+    void setTimer(bool block)
+    {
+        // Перевіркуа на блокуванння системи
+        if (block == false)
+        {
+            // Опитуємо кнопку +
+            buttonAdd.tick();
+            // Опитуємо кнопку -
+            buttonSubstact.tick();
+
+            // Якщо натиснуто +
+            if (buttonAdd.click())
+            {
+                minutes += TIMER_STEP;
+                if (minutes >= 60)
+                {
+                    hours += minutes / 60;
+                    minutes = 0;
+                    if (hours >= 24)
+                    {
+                        hours = 0;
+                    }
+                }
+            }
+
+            // Якщо натиснуто -
+            if (buttonSubstact.click())
+            {
+                if (minutes >= TIMER_STEP)
+                {
+                    minutes -= TIMER_STEP;
+                }
+                else
+                {
+                    if (hours > 0)
+                    {
+                        hours--;
+                        minutes = 60 - TIMER_STEP;
+                    }
+                }
+            }
+            // Вивід годин на дисплей
+            display.displayClock(hours, minutes);
+        }
+    }
+
+    // Функція для встановлення температури
+    void setTemperature(bool block)
+    {
+        if (block == false)
+        {   // Опитування стану кнопки
+            buttonAdd.tick();
+            // Опитування стану кнопки
+            buttonSubstact.tick();
+
+            // Вимикаємо двокрапку
+            display.point(POINT_OFF);
+
+            // Якщо натиснуто +
+            if (buttonAdd.click())
+            {
+                temperature += TEMP_STEP;
+            }
+            // Обмежання в діапозон
+            if (temperature > TEMP_MAX)
+            {
+                temperature = TEMP_MIN;
+            }
+
+            // Якщо натиснуто -
+            if (buttonSubstact.click())
+            {
+                temperature -= TEMP_STEP;
+            }
+            // Обмежання в діапозон
+            if (temperature <= TEMP_MIN)
+            {
+                temperature = TEMP_MIN;
+            }
+
+            // Запис в EEPROM
+            if (temperature != prevTemperature)
+            {
+                EEPROM.write(ADDR_TEMPERATURE, temperature);
+                prevTemperature = temperature;
+            }
+
+            // Переведення под дисплей
+            byte temp = temperature;     // Перетворення значення температури на ціле число
+            byte tempone = temp / 10;    // Отримуємо десятки
+            byte temptwo = temp % 10;    // Отримуємо одиниці
+
+            // Вивід на дисплей
+            display.displayByte(0, 0x00);   // Звільнити місце
+            display.display(2, temptwo);    // Виводимо одиниці
+            display.display(1, tempone);    // выводимо десятки
+            display.displayByte(3, 0x61);   // Підставляємо знак Цельсія
+        }
+    }
 
     // Функція відліку часу
     void timerCounting()
     {
         static unsigned long prevMillis = 0;
-        static unsigned long interval = TIMER_MINUTE;   // Інтервал у мілісекундах
+        static unsigned long interval = TIMER_MINUTE;
 
-        buttonStart.tick();     // Опитування стану кнопки
+        // Опитування стану кнопки
+        buttonStart.tick();   
+        //Якщо натиснута, і години + хвилини == 0, то
         if(buttonStart.click() && hours + minutes != 0)
         {
+            // Перевірка на роботу таймера
             if (!timerRunning) 
             {    
                 // Якщо таймер не запущено, то запускаємо його
                 timerRunning = true;
+                // Блокуємо
+                systemBlock = true;
+                // Повертаємо яскравість
+                display.brightness(BRIGHTNESS);
             } 
+            // Інакше
             else 
             { 
                 // Інакше зупиняємо таймер і зупиняємо навантаження
                 timerRunning = false;
-                digitalWrite(CHARGE, LOW);
+                // Розблокуємо системне блокування
+                systemBlock = false;
             }
-        }
-
-        // Флаг для блокування зміни значень
-        if(buttonStart.held() && hours + minutes != 0)
-        {
-            setBlock = !setBlock;
         }
 
         if (timerRunning) 
         {
-            setBlock = true;
             pollTemperatures();
-            turnOffRele();
-            if(hours + minutes == 0)
+            manageRele();
+
+            if (hours + minutes == 0)
             {
-                digitalWrite(CHARGE, LOW);
+                digitalWrite(HEATER, LOW);
+                digitalWrite(COOLER, LOW);
             }
-            
-            disp_ta.displayClock(hours, minutes);   // Виведення часу на дисплей
-            
+                
+            display.displayClock(hours, minutes);   // Виведення часу на дисплей
+                    
             unsigned long currentMillis = millis();
             if (currentMillis - prevMillis >= interval) 
             {
@@ -264,201 +381,88 @@ Dryer() :
         }
         else
         {
-            setBlock = false;
+            digitalWrite(HEATER, LOW);
+            digitalWrite(COOLER, LOW);
         }
     }
 
-    void setTemperatureAuto(bool celsiusSign)
-    {
-        buttonMode.tick();
 
-        if (buttonMode.click()) 
-        {
-            digitalWrite(ledPins[activeLed], LOW);      // Вимикаємо попередній світлодіод
-            activeLed = (activeLed + 1) % numLeds;      // Збільшуємо індекс активного світлодіода
-            digitalWrite(ledPins[activeLed], HIGH);     // Збільшуємо індекс активного світлодіода
-
-            switch (activeLed)
-            {
-            case modesTemperature::APPLES:
-                Serial.println("Режим: Яблука");
-                temperature = 65;
-                hours = 8;
-                minutes = 0;
-                break;
-            case modesTemperature::PEARS:
-                Serial.println("Режим: Груші");
-                temperature = 50;
-                hours = 10;
-                minutes = 0;
-                break;
-            case modesTemperature::CHERRY:
-                Serial.println("Режим: Вишні");
-                temperature = 60;
-                hours = 7;
-                minutes = 0;
-                break;
-            case modesTemperature::BERRIES:
-                Serial.println("Режим: Ягоди");
-                temperature = 50;
-                hours = 10;
-                minutes = 0;
-                break;
-            case modesTemperature::MUSHROOMS:
-                Serial.println("Режим: Гриби");
-                temperature = 50;
-                hours = 7;
-                minutes = 0;
-                break;
-            case modesTemperature::MEAT:
-                Serial.println("Режим: М'ясо");
-                temperature = 45;
-                hours = 8;
-                minutes = 0;
-                break;
-            case modesTemperature::HERBS:
-                Serial.println("Режим: Трави");
-                temperature = 35;
-                hours = 6;
-                minutes = 0;
-                break;
-            case modesTemperature::ROSEHIP:
-                Serial.println("Режим: Шипшина");
-                temperature = 55;
-                hours = 10;
-                minutes = 0;
-                break;
-            default:
-                Serial.println("Помилка вибору режиму!");
-                temperature = TEMP_MIN;
-                break;
-            }
-        }
-
-        byte temp = temperature;     // Перетворення значення температури на ціле число
-        byte tempone = temp / 10;    // Отримуємо десятки
-        byte temptwo = temp % 10;    // Отримуємо одиниці
-
-        if(!celsiusSign)
-        {
-            disp_ds.display(3, temptwo);    // Виводимо одиниці
-            disp_ds.display(2, tempone);    // выводимо десятки
-        }
-        else
-        {
-            disp_ds.display(1, temptwo);    // Виводимо одиниці
-            disp_ds.display(0, tempone);    // выводимо десятки
-            disp_ds.displayByte(2, 0x63);   // Підставляємо знак Цельсія
-            disp_ds.displayByte(3, 0x39);   // Підставляємо знак градуса 
-        }
-        disp_ta.displayClock(hours, minutes);
-    }
-
-    // Функція для встановлення температури
-    void setTemperatureManual(bool celsiusSign)
-    {
-        buttonTempUp.tick();    // Опитування стану кнопки температури +
-        buttonTempDown.tick();  // Опитування стану кнопки температури -
-
-        if (buttonTempUp.click())
-        {
-            temperature++;
-        }
-        else if (buttonTempUp.hold())
-        {
-            temperature += TEMP_STEP;
-            delay(TEMP_DELAY);
-        }
-
-        if (temperature > TEMP_MAX)
-        {
-            temperature = TEMP_MIN;
-        }
-
-        if (buttonTempDown.click())
-        {
-            temperature--;
-        }
-        else if (buttonTempDown.hold())
-        {
-            temperature -= TEMP_STEP;
-            delay(TEMP_DELAY);
-        }
-
-        if (temperature <= TEMP_MIN)
-        {
-            temperature = TEMP_MIN;
-        }
-        
-        byte temp = temperature;     // Перетворення значення температури на ціле число
-        byte tempone = temp / 10;    // Отримуємо десятки
-        byte temptwo = temp % 10;    // Отримуємо одиниці
-
-        if(!celsiusSign)
-        {
-            disp_ds.display(3, temptwo);    // Виводимо одиниці
-            disp_ds.display(2, tempone);    // выводимо десятки
-        }
-        else
-        {
-            disp_ds.display(1, temptwo);    // Виводимо одиниці
-            disp_ds.display(0, tempone);    // выводимо десятки
-            disp_ds.displayByte(2, 0x63);   // Підставляємо знак Цельсія
-            disp_ds.displayByte(3, 0x39);   // Підставляємо знак градуса
-        }
-    }
-
-    // Функція для отримання температури з датчика
+    // Функція отримання температури датчика в печі
     void pollTemperatures()
     {
         static uint32_t timerTemp = millis();
         if(millis() - timerTemp >= TEMP_QUIZ)
         {
-            sensors.requestTemperatures();          // Запитуємо дані з датчика
-            float tempC = sensors.getTempCByIndex(0);     // Зчитуємо температуру і зберегти її в змінній tempС
-            if (tempC == -127)
+            // Запрос данних з датчика температури
+            sensors.requestTemperatures();
+            // Зчитування данних
+            realTemperature = sensors.getTempCByIndex(0);
+            // Відладка помилки відсутності/несправності датчика (Помилка 1)
+            if (realTemperature == -127)
             {
-                /*---------НАЛАГОДЖЕННЯ---------*/
+                // Зупиняємо таймер
+                timerRunning = false;
+                // Вимикаємо двокрапку
+                display.point(0);
+                // Виведення в монітор порту (Помилка 1)
                 Serial.println("Temperature retrieval error.");
+                // Виведення на дисплей (Помилка 1)
+                display.displayByte(_E, _r, _r, _1);
+                // Якщо пройшло 5 секунд, перехід на старт-меню
+                delay(5000);
+                // Обнуляємо значення годин, 
                 hours = 0;
                 minutes = 0;
-                disp_ds.displayByte(0x00, _E, _r, _r);
-                static uint32_t sensError = millis();
-                if(millis() - sensError >= 5000)
-                {
-                    timerRunning = false;
-                    disp_ds.displayByte(0x00, 0x00, 0x00, 0x00);
-                    temperature = TEMP_MIN;
-                    sensError = millis();
-                }
-                /*------------------------------*/
+                temperature = TEMP_MIN;
+
             }
+            // Якщо все добре, вивід в монітор порта поточної температури
             else
             {
-                /*---------НАЛАГОДЖЕННЯ---------*/
                 Serial.print("Temperature: ");
-                Serial.print(tempC);
+                Serial.print(realTemperature);
                 Serial.println("C");
-                /*------------------------------*/
             }
-
             timerTemp = millis();
         }
     }
 
     // Функція для вимкнення реле заряду при досягненні встановленої температури
-    void turnOffRele() 
+    void manageRele() 
     {
-        // Перевіряємо, чи поточна температура (tempC) перевищує або дорівнює заданій температурі (temperature)
-        if(tempC >= temperature) 
+        // Перевіряємо, чи поточна температура перевищує або дорівнює заданій температурі
+        if(realTemperature >= temperature) 
         {
-            digitalWrite(CHARGE, LOW);      // Якщо умова виконується, вимикаємо реле заряду (CHARGE)
+            // Якщо умова виконується, вимикаємо реле
+            digitalWrite(HEATER, LOW);
+            // Якщо умова виконується, увімкнемо кулер
+            digitalWrite(COOLER, HIGH);
         }
 
-        // Перевіряємо, чи поточна температура (tempC) менша за задану температуру (temperature - TEMP_STEPON)
-        if(tempC <= temperature - TEMP_STEPON) 
+        // Перевіряємо, чи поточна температура менша за задану температуру
+        if(realTemperature <= temperature - TEMP_STEPON) 
         {
-            digitalWrite(CHARGE, HIGH);     // Якщо умова виконується, увімкнемо реле заряду (CHARGE)
+            // Якщо умова виконується, увімкнемо нагрівач
+            digitalWrite(HEATER, HIGH);
+            // Якщо умова виконується, увімкнемо кулер
+            digitalWrite(COOLER, HIGH);
+        }
+    }
+
+    // Функція підсвітлювача печі
+    void backlight()
+    {
+        // Опитуємо кнопку підсвітлювача
+        buttonBacklight.tick();
+
+        // Перевірка, чи натиснуто кнопку
+        if (buttonBacklight.click())
+        {
+            // Перемкнути стан підсвічування
+            backlightState = !backlightState;
+
+            // Оновлення світлодіодів на основі стану підсвічування
+            digitalWrite(LEDS, backlightState ? HIGH : LOW);
         }
     }
 };
