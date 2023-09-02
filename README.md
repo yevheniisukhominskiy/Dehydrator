@@ -32,7 +32,7 @@ Dehydrators are also known as drying machines. Their principle of operation is q
 ## Documentation
 
 ### Device selection
-The project was developed based on the LGT8F328P-LQFP48 microcontroller. This microcontroller offers a range of features and capabilities that make it suitable for a vegetable dehydrator project. Starting from version 2.0, support for the AVR platform is available.
+The project was developed based on the LGT8F328P-LQFP48 microcontroller. This microcontroller offers a range of features and capabilities that make it suitable for a vegetable dehydrator project. Starting from version 2.1, support for the STM platform is available.
 
 To select the device for the Vegetable Dehydrators project in PlatformIO, follow these steps:
 1. Open the platformio.ini file.
@@ -50,30 +50,18 @@ lib_deps =
 	gyverlibs/GyverTM1637@^1.4.2
 ```
 
-### Arduino Nano
+### STM32F103C8T6 Blue Pill
 ```ini
-[env:nanoatmega328]
-platform = atmelavr
-board = nanoatmega328
+[env:bluepill_f103c8]
+platform = ststm32
+board = bluepill_f103c8
 framework = arduino
+upload_protocol = serial
 lib_deps = 
 	milesburton/DallasTemperature@^3.11.0
 	gyverlibs/EncButton@^3.0
 	gyverlibs/GyverTM1637@^1.4.2
 ```
-
-### Arduino Uno
-```ini
-[env:uno]
-platform = atmelavr
-board = uno
-framework = arduino
-lib_deps = 
-	milesburton/DallasTemperature@^3.11.0
-	gyverlibs/EncButton@^3.0
-	gyverlibs/GyverTM1637@^1.4.2
-```
-
 
 ### Connection
 ![Alt text](documents/conections.png)
