@@ -95,7 +95,7 @@ Connection view is available [here](https://wokwi.com/projects/new/arduino-nano)
 | PIN            | -           | CLK -> 12  |
 
 ### Modules
-* 1x Board: LGT8F328P or AVR
+* 1x Board: LGT8F328P or STM
 * 1x Digital Display: TM1637
 * 1x Temperature Sensor: DS18B20
 * 6x Button Interface: TACT 12x12
